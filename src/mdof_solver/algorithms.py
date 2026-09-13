@@ -80,7 +80,7 @@ class Newton(SolutionAlgorithm):
                     return self._outcome(True, x, iteration, residual, test)
         except (np.linalg.LinAlgError, FloatingPointError, ValueError) as exc:
             return SolveOutcome(False, x, iteration, float(np.linalg.norm(residual)), str(exc))
-        return self._outcome(False, x, max_iter, residual, test, "达到最大迭代次数")
+        return self._outcome(False, x, max_iter, residual, test, "Maximum iteration count reached")
 
 
 @dataclass(frozen=True)
@@ -125,7 +125,7 @@ class NewtonLineSearch(SolutionAlgorithm):
                     return self._outcome(True, x, iteration, residual, test)
         except (np.linalg.LinAlgError, FloatingPointError, ValueError) as exc:
             return SolveOutcome(False, x, iteration, float(np.linalg.norm(residual)), str(exc))
-        return self._outcome(False, x, max_iter, residual, test, "达到最大迭代次数")
+        return self._outcome(False, x, max_iter, residual, test, "Maximum iteration count reached")
 
 
 @dataclass(frozen=True)
@@ -135,7 +135,7 @@ class KrylovNewton(SolutionAlgorithm):
 
     def __post_init__(self) -> None:
         if self.max_dimension < 1:
-            raise ValueError("KrylovNewton.max_dimension 必须大于 0")
+            raise ValueError("KrylovNewton.max_dimension must be greater than zero")
 
     def solve(self, problem, initial, rtol, atol, max_iter) -> SolveOutcome:
         x = initial.copy()
@@ -174,4 +174,4 @@ class KrylovNewton(SolutionAlgorithm):
                     _, frozen_tangent, _ = problem.evaluate(x)
         except (np.linalg.LinAlgError, FloatingPointError, ValueError) as exc:
             return SolveOutcome(False, x, iteration, float(np.linalg.norm(residual)), str(exc))
-        return self._outcome(False, x, max_iter, residual, test, "达到最大迭代次数")
+        return self._outcome(False, x, max_iter, residual, test, "Maximum iteration count reached")

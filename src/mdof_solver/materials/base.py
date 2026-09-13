@@ -27,7 +27,7 @@ class StiffnessExpression:
             return cls(terms=[MaterialTerm(1.0, value)])
         if isinstance(value, Real):
             return cls(value)
-        raise TypeError(f"刚度矩阵条目不支持 {type(value).__name__}")
+        raise TypeError(f"Unsupported stiffness matrix entry type: {type(value).__name__}")
 
     def _combine(self, other: Any, sign: float) -> "StiffnessExpression":
         rhs = self.coerce(other)
@@ -68,7 +68,7 @@ class StiffnessExpression:
 
 def validate_tag(tag: Any) -> int:
     if isinstance(tag, bool) or not isinstance(tag, Integral):
-        raise TypeError("材料 tag 必须是整数")
+        raise TypeError("Material tag must be an integer")
     return int(tag)
 
 

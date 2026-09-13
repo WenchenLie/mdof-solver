@@ -25,9 +25,9 @@ class ModTakeda(UniaxialMaterial):
         self.alpha = float(alpha)
         self.beta = float(beta)
         if self.Fy <= 0 or self.k0 <= 0:
-            raise ValueError("ModTakeda 要求 Fy > 0 且 k0 > 0")
+            raise ValueError("ModTakeda requires Fy > 0 and k0 > 0")
         if min(self.r, self.alpha, self.beta) < 0:
-            raise ValueError("ModTakeda 要求 r、alpha、beta 不小于 0")
+            raise ValueError("ModTakeda requires r, alpha, and beta to be nonnegative")
         self.revertToStart()
 
     def setTrialStrain(self, strain: float, strainRate: float = 0.0) -> None:

@@ -27,9 +27,9 @@ class LoadHistory:
     ):
         if callable(samples_or_function):
             if t_min is None or t_max is None or size is None:
-                raise ValueError("函数荷载必须提供 t_min、t_max 和 size")
+                raise ValueError("A functional load requires t_min, t_max, and size")
             if not t_max > t_min or size <= 0:
-                raise ValueError("函数荷载的时间范围或向量长度无效")
+                raise ValueError("Invalid time range or vector size for a functional load")
             self._function = samples_or_function
             self.t_min, self.t_max, self.size = float(t_min), float(t_max), int(size)
             self.dt = None
@@ -38,11 +38,11 @@ class LoadHistory:
         elif forces is None:
             values = np.asarray(samples_or_function, dtype=float)
             if dt is None or not np.isfinite(dt) or dt <= 0:
-                raise ValueError("等步长荷载必须提供大于 0 的 dt")
+                raise ValueError("A uniformly sampled load requires a finite dt greater than zero")
             if values.ndim != 2 or values.shape[0] < 2 or values.shape[1] < 1:
-                raise ValueError("荷载数组形状必须为 (时间点数, 自由度数)，且至少有两个时间点")
+                raise ValueError("The load array must have shape (time points, DOFs) with at least two time points")
             if not np.isfinite(t0) or not np.all(np.isfinite(values)):
-                raise ValueError("荷载时程包含非有限值")
+                raise ValueError("The load history contains non-finite values")
             self.dt = float(dt)
             self.t_min = float(t0)
             self.t_max = self.t_min + self.dt * (values.shape[0] - 1)
@@ -52,15 +52,15 @@ class LoadHistory:
             self._function = None
         else:
             if dt is not None:
-                raise ValueError("使用显式 times 时不能同时提供 dt")
+                raise ValueError("dt cannot be provided together with explicit times")
             times = np.asarray(samples_or_function, dtype=float)
             values = np.asarray(forces, dtype=float)
             if times.ndim != 1 or len(times) < 2 or np.any(np.diff(times) <= 0):
-                raise ValueError("荷载时间必须为严格递增的一维数组")
+                raise ValueError("Load times must be a strictly increasing one-dimensional array")
             if values.ndim != 2 or values.shape[0] != len(times):
-                raise ValueError("荷载数组形状必须为 (时间点数, 自由度数)")
+                raise ValueError("The load array must have shape (time points, DOFs)")
             if not np.all(np.isfinite(times)) or not np.all(np.isfinite(values)):
-                raise ValueError("荷载时程包含非有限值")
+                raise ValueError("The load history contains non-finite values")
             self.times, self.forces = times, values
             self.t_min, self.t_max = float(times[0]), float(times[-1])
             increments = np.diff(times)
@@ -72,22 +72,22 @@ class LoadHistory:
         t = float(time)
         tolerance = 1e-12 * max(1.0, abs(self.t_min), abs(self.t_max))
         if t < self.t_min - tolerance or t > self.t_max + tolerance:
-            raise ValueError(f"荷载查询时间 {t:g} 超出 [{self.t_min:g}, {self.t_max:g}]")
+            raise ValueError(f"Load query time {t:g} is outside [{self.t_min:g}, {self.t_max:g}]")
         t = min(max(t, self.t_min), self.t_max)
         if self._function is not None:
             value = np.asarray(self._function(t), dtype=float)
         else:
             value = np.array([np.interp(t, self.times, self.forces[:, i]) for i in range(self.size)])
         if value.shape != (self.size,) or not np.all(np.isfinite(value)):
-            raise ValueError("荷载函数返回了错误形状或非有限值")
+            raise ValueError("The load function returned an invalid shape or non-finite values")
         return value
 
     def __add__(self, other: "LoadHistory") -> "LoadHistory":
         if not isinstance(other, LoadHistory) or self.size != other.size:
-            raise ValueError("相加荷载必须具有相同自由度数")
+            raise ValueError("Loads being added must have the same number of DOFs")
         lower, upper = max(self.t_min, other.t_min), min(self.t_max, other.t_max)
         if upper <= lower:
-            raise ValueError("相加荷载没有公共时间范围")
+            raise ValueError("Loads being added have no common time range")
         return LoadHistory(lambda t: self(t) + other(t), t_min=lower, t_max=upper, size=self.size)
 
     __radd__ = __add__

@@ -42,7 +42,7 @@ class RuntimeElement:
         force = self.info.weight * float(self.material.getStress())
         tangent = self.info.weight * float(self.material.getTangent())
         if not np.isfinite(force) or not np.isfinite(tangent):
-            raise FloatingPointError(f"单元 {self.info.id} 的材料返回非有限值")
+            raise FloatingPointError(f"Material for element {self.info.id} returned a non-finite value")
         return force, tangent
 
 
@@ -146,10 +146,10 @@ class System:
         self.load = load
         n = self.mass.shape[0]
         if self.damping.shape != (n, n) or self.stiffness.shape != (n, n) or load.size != n:
-            raise ValueError("质量、阻尼、刚度和荷载自由度数必须一致")
+            raise ValueError("Mass, damping, stiffness, and load must have the same number of DOFs")
         self._numeric_stiffness, definitions = self.stiffness.split()
         if not np.allclose(self._numeric_stiffness, self._numeric_stiffness.T, rtol=1e-10, atol=1e-12):
-            raise ValueError("刚度矩阵的数值部分必须对称")
+            raise ValueError("The numeric part of the stiffness matrix must be symmetric")
         self._definitions = self._compile_definitions(definitions)
         self.eles = tuple(info for info, _, _ in self._definitions)
 
@@ -160,10 +160,13 @@ class System:
     def _validate_material(self, material: Any) -> None:
         missing = [name for name in _MATERIAL_METHODS if not callable(getattr(material, name, None))]
         if missing:
-            raise TypeError(f"材料 {getattr(material, 'tag', material)!r} 缺少接口: {', '.join(missing)}")
+            raise TypeError(
+                f"Material {getattr(material, 'tag', material)!r} is missing methods: "
+                f"{', '.join(missing)}"
+            )
         tag = getattr(material, "tag", None)
         if isinstance(tag, bool) or not isinstance(tag, Integral):
-            raise TypeError("材料 tag 必须是整数")
+            raise TypeError("Material tag must be an integer")
 
     def _compile_definitions(self, definitions):
         result = []
@@ -175,17 +178,17 @@ class System:
             self._validate_material(template)
             existing = tags.get(int(template.tag))
             if existing is not None and existing is not template:
-                raise ValueError(f"材料 tag {template.tag} 在同一体系中重复")
+                raise ValueError(f"Material tag {template.tag} is duplicated within the system")
             tags[int(template.tag)] = template
             scale = max(1.0, float(np.max(np.abs(coefficient))))
             tol = tolerance * scale
             if not np.allclose(coefficient, coefficient.T, rtol=1e-10, atol=tol):
-                raise ValueError(f"材料模板 {template.tag!r} 的系数矩阵不对称")
+                raise ValueError(f"Coefficient matrix for material template {template.tag!r} is not symmetric")
             if np.any(coefficient[np.triu_indices(n, 1)] > tol):
-                raise ValueError(f"材料模板 {template.tag!r} 的非对角系数必须非正")
+                raise ValueError(f"Off-diagonal coefficients for material template {template.tag!r} must be nonpositive")
             row_sums = coefficient.sum(axis=1)
             if np.any(row_sums < -tol):
-                raise ValueError(f"材料模板 {template.tag!r} 的系数矩阵行和不能为负")
+                raise ValueError(f"Coefficient-matrix row sums for material template {template.tag!r} cannot be negative")
             reconstructed = np.zeros_like(coefficient)
             pieces: list[tuple[float, NDArray[np.float64], tuple[int, ...]]] = []
             for i, value in enumerate(row_sums):
@@ -201,7 +204,7 @@ class System:
                         pieces.append((float(value), b, (i, j)))
                         reconstructed += value * np.outer(b, b)
             if not np.allclose(coefficient, reconstructed, rtol=1e-9, atol=tol):
-                raise ValueError(f"材料模板 {template.tag!r} 无法分解为支持的连接")
+                raise ValueError(f"Material template {template.tag!r} cannot be decomposed into supported connections")
             for weight, b, dofs in pieces:
                 info = ElementInfo(
                     id=f"E{element_number}", template_tag=template.tag, weight=weight,
@@ -225,18 +228,18 @@ class System:
         for info, b, template in self._definitions:
             value = float(template.getInitialTangent())
             if not np.isfinite(value):
-                raise ValueError(f"材料模板 {template.tag!r} 返回非有限初始刚度")
+                raise ValueError(f"Material template {template.tag!r} returned a non-finite initial stiffness")
             matrix += info.weight * value * np.outer(b, b)
         return matrix
 
     def eigen(self, n_modes: int | None = None, influence: ArrayLike | None = None) -> ModalResult:
         stiffness = self.initial_stiffness()
         if not np.allclose(stiffness, stiffness.T, rtol=1e-10, atol=1e-12):
-            raise ValueError("初始刚度矩阵必须对称")
+            raise ValueError("The initial stiffness matrix must be symmetric")
         values, vectors = eigh(stiffness, self.mass.values)
         if n_modes is not None:
             if n_modes <= 0 or n_modes > self.ndof:
-                raise ValueError("n_modes 必须位于 1 到自由度数之间")
+                raise ValueError("n_modes must be between 1 and the number of DOFs")
             values, vectors = values[:n_modes], vectors[:, :n_modes]
         scale = max(1.0, float(np.max(np.abs(values))))
         tol = 1e-10 * scale
@@ -251,7 +254,7 @@ class System:
         if influence is not None:
             direction = np.asarray(influence, dtype=float)
             if direction.shape != (self.ndof,):
-                raise ValueError("影响向量长度必须等于自由度数")
+                raise ValueError("The influence vector length must equal the number of DOFs")
             factors = vectors.T @ self.mass.values @ direction
             masses = factors**2
             total = float(direction @ self.mass.values @ direction)

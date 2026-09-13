@@ -20,7 +20,7 @@ class Newmark:
 
     def __post_init__(self) -> None:
         if self.gamma <= 0 or self.beta <= 0:
-            raise ValueError("Newmark 的 gamma 和 beta 必须大于 0")
+            raise ValueError("Newmark gamma and beta must be greater than zero")
 
     def prepare(self, state: KinematicState, dt: float):
         h, beta, gamma = dt, self.beta, self.gamma
@@ -47,11 +47,11 @@ class HHT:
 
     def __post_init__(self) -> None:
         if not 2.0 / 3.0 <= self.alpha <= 1.0:
-            raise ValueError("HHT.alpha 必须位于 [2/3, 1]")
+            raise ValueError("HHT.alpha must be in [2/3, 1]")
         gamma = 1.5 - self.alpha if self.gamma is None else self.gamma
         beta = (2.0 - self.alpha) ** 2 / 4.0 if self.beta is None else self.beta
         if gamma <= 0 or beta <= 0:
-            raise ValueError("HHT 的 gamma 和 beta 必须大于 0")
+            raise ValueError("HHT gamma and beta must be greater than zero")
         object.__setattr__(self, "gamma", float(gamma))
         object.__setattr__(self, "beta", float(beta))
 

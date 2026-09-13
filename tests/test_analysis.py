@@ -92,8 +92,52 @@ def test_peaks_and_file_outputs(tmp_path):
 
 
 def test_central_difference_rejects_off_grid_end():
-    with pytest.raises(ValueError, match="固定步长网格"):
+    with pytest.raises(ValueError, match="fixed time-step grid"):
         TransientAnalysis(oscillator(), CentralDifference()).run(0.03, 0.1)
+
+
+def test_free_vibration_extends_analysis_with_zero_load():
+    system = System(
+        [[1.0]], [[0.0]], [[0.0]],
+        LoadHistory([[1.0], [1.0]], dt=0.1),
+    )
+    result = TransientAnalysis(system, Newmark(), (Newton(),)).run(
+        0.1,
+        free_vibration_duration=0.1,
+        recorder=Recorder(disp="all", velo="all", accel="all"),
+    )
+    assert np.allclose(result.times, [0.0, 0.1, 0.2])
+    assert result.accel[:, 0] == pytest.approx([1.0, 1.0, 0.0])
+    assert result.disp[-1, 0] == pytest.approx(0.0175)
+
+
+def test_central_difference_supports_on_grid_free_vibration():
+    result = TransientAnalysis(oscillator(), CentralDifference()).run(
+        0.01,
+        t_end=0.1,
+        free_vibration_duration=0.1,
+        u0=[1.0],
+        recorder=Recorder(disp="all"),
+    )
+    assert result.times[-1] == pytest.approx(0.2)
+    assert result.disp.shape == (21, 1)
+
+
+def test_implicit_analysis_splits_step_at_load_end():
+    result = TransientAnalysis(oscillator(), Newmark(), (Newton(),)).run(
+        0.06,
+        t_end=0.1,
+        free_vibration_duration=0.05,
+        u0=[1.0],
+        recorder=Recorder(disp="all"),
+    )
+    assert result.times == pytest.approx([0.0, 0.06, 0.1, 0.12, 0.15])
+
+
+@pytest.mark.parametrize("duration", [-0.1, np.inf, np.nan])
+def test_free_vibration_duration_must_be_finite_and_nonnegative(duration):
+    with pytest.raises(ValueError, match="free_vibration_duration"):
+        TransientAnalysis(oscillator()).run(0.01, free_vibration_duration=duration)
 
 
 def test_fixed_record_interval_still_tracks_substep_peaks():

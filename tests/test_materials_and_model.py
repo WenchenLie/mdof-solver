@@ -64,7 +64,7 @@ def test_matrix_infers_two_independent_runtime_connections():
 
 def test_invalid_material_coefficient_matrix_is_rejected():
     material = Elastic(9, 10)
-    with pytest.raises(ValueError, match="非对角系数"):
+    with pytest.raises(ValueError, match="Off-diagonal coefficients"):
         System(np.eye(2), np.zeros((2, 2)), [[material, material], [material, material]], zero_load())
 
 
@@ -159,12 +159,12 @@ def test_solver_uses_only_public_material_protocol():
     lambda: ModTakeda("invalid", 1.0, 10.0, 0.01, 0.5, 0.2),
 ])
 def test_material_tag_must_be_integer(factory):
-    with pytest.raises(TypeError, match="tag 必须是整数"):
+    with pytest.raises(TypeError, match="tag must be an integer"):
         factory()
 
 
 def test_material_tags_are_unique_within_system():
     first = Elastic(1, 10.0)
     second = Elastic(1, 20.0)
-    with pytest.raises(ValueError, match="tag 1.*重复"):
+    with pytest.raises(ValueError, match="tag 1.*duplicated"):
         System(np.eye(2), np.zeros((2, 2)), [[first, 0], [0, second]], zero_load())

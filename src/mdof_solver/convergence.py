@@ -43,7 +43,7 @@ class ConvergenceTest:
 def _validate_norm_type(norm_type: float) -> float:
     value = float(norm_type)
     if np.isnan(value) or value < 1.0:
-        raise ValueError("norm_type 必须不小于 1，或为 np.inf")
+        raise ValueError("norm_type must be at least 1 or np.inf")
     return value
 
 

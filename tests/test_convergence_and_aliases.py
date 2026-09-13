@@ -77,7 +77,7 @@ def test_full_recorder_parameter_names_are_removed():
 
 def test_peak_is_the_only_peak_only_mode_name():
     assert Recorder(mode="peak").mode == "peak"
-    with pytest.raises(ValueError, match="history、peak 或 both"):
+    with pytest.raises(ValueError, match="history.*peak.*both"):
         Recorder(mode="peaks")
 
     result = TransientAnalysis(oscillator(), Newmark(), (Newton(),)).run(

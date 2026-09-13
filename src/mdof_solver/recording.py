@@ -28,11 +28,11 @@ class Recorder:
 
     def __post_init__(self) -> None:
         if self.mode not in ("history", "peak", "both"):
-            raise ValueError("Recorder.mode 必须是 history、peak 或 both")
+            raise ValueError("Recorder.mode must be 'history', 'peak', or 'both'")
         if not self.keep_in_memory and self.csv_path is None:
-            raise ValueError("keep_in_memory=False 时必须设置 csv_path")
+            raise ValueError("csv_path is required when keep_in_memory=False")
         if self.interval is not None and self.interval <= 0:
-            raise ValueError("Recorder.interval 必须大于 0")
+            raise ValueError("Recorder.interval must be greater than zero")
 
 
 @dataclass(frozen=True)
@@ -130,7 +130,7 @@ class ResponseCollector:
             return []
         result = list(range(size)) if selection == "all" else [int(x) for x in selection]
         if len(set(result)) != len(result) or any(x < 0 or x >= size for x in result):
-            raise ValueError("节点记录索引无效或重复")
+            raise ValueError("Node recorder indices are invalid or duplicated")
         return result
 
     @staticmethod
@@ -139,7 +139,7 @@ class ResponseCollector:
             return [], ()
         chosen = ids if selection == "all" else tuple(selection)
         if len(set(chosen)) != len(chosen) or any(x not in ids for x in chosen):
-            raise ValueError("单元记录编号无效或重复")
+            raise ValueError("Element recorder IDs are invalid or duplicated")
         return [ids.index(x) for x in chosen], chosen
 
     def record(

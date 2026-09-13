@@ -19,7 +19,7 @@ class Steel01(UniaxialMaterial):
         self.k = float(k)
         self.b = float(b)
         if self.Fy <= 0 or self.k <= 0:
-            raise ValueError("Steel01 要求 Fy > 0 且 k > 0")
+            raise ValueError("Steel01 requires Fy > 0 and k > 0")
         self.revertToStart()
 
     def setTrialStrain(self, strain: float, strainRate: float = 0.0) -> None:

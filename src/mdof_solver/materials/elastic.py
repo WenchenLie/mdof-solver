@@ -13,7 +13,7 @@ class Elastic(UniaxialMaterial):
     def __post_init__(self) -> None:
         self.tag = validate_tag(self.tag)
         if not self.k > 0:
-            raise ValueError("Elastic.k 必须大于 0")
+            raise ValueError("Elastic.k must be greater than zero")
         self.revertToStart()
 
     def setTrialStrain(self, strain: float, strainRate: float = 0.0) -> None:

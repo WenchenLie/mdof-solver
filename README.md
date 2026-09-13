@@ -62,6 +62,7 @@ result = TransientAnalysis(
     convergence_test=NormUnbalance(),
 ).run(
     dt=dt,
+    free_vibration_duration=5.0,
     recorder=Recorder(
         disp="all",
         ele_force="all",
@@ -72,6 +73,8 @@ result = TransientAnalysis(
 print(system.eles)
 print(result.disp)
 ```
+
+`free_vibration_duration` 指定荷载时程结束后继续进行的零外荷载自由振动时长，便于在瞬态响应衰减后读取残余变形；默认值为 `0.0`。
 
 矩阵中的材料对象是规则模板。上例会自动生成两个独立材料状态：一条使用 `u[0]`，另一条使用 `u[1]-u[0]`。单元变形可以通过记录器按需输出。
 
