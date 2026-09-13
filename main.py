@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import numpy as np
 
 from mdof_solver.algorithms import KrylovNewton, Newton, NewtonLineSearch
@@ -14,12 +15,8 @@ from mdof_solver.recording import Recorder
 def main() -> None:
     # 1. Define the time step, free-vibration duration, and uniform ground-acceleration samples.
     dt = 0.01
-    duration = 5.0
-    free_vibration_duration = 5.0
-    sample_count = round(duration / dt) + 1
-    sample_index = np.arange(sample_count)
-    time = sample_index * dt  # Used only to generate the example waveform; not passed to LoadHistory.
-    ground_acceleration = 4.0 * np.sin(2.0 * np.pi * 1.2 * time) * np.exp(-0.35 * time)
+    ground_acceleration = np.loadtxt('data/gm1(dt=0.01).txt') * 9800
+    free_vibration_duration = 30
 
     # 2. Build the four-DOF mass matrix.
     masses = np.array([2.0, 1.8, 1.5, 1.2])
@@ -32,8 +29,8 @@ def main() -> None:
     load = LoadHistory(load_samples, dt=dt)
 
     # 4. Define material-rule templates and an ordinary numeric stiffness.
-    k1 = Steel01(tag=1, Fy=6.0, k=320.0, b=0.02)
-    k2 = Steel01(tag=2, Fy=5.0, k=280.0, b=0.015)
+    k1 = Steel01(tag=1, Fy=100, k=320.0, b=0.02)
+    k2 = Steel01(tag=2, Fy=80, k=280.0, b=0.015)
     k3 = Elastic(tag=3, k=240.0)
     k4 = 180.0
 
@@ -112,24 +109,65 @@ def main() -> None:
         free_vibration_duration=free_vibration_duration,
         recorder=recorder,
     )
-    print("模态特征值:", eigenvalues)
-    print("模态圆频率(rad/s):", omega)
-    print("模态频率(Hz):", frequencies)
-    print("模态周期(s):", periods)
-    print("质量归一化振型（每列对应一阶模态）:\n", shapes)
-    print("模态参与系数:", participation)
-    print("有效模态质量:", effective_mass)
-    print("有效模态质量比:", effective_mass_ratio)
-    print("自动生成的单元:")
+    print("Eigenvalues:", eigenvalues)
+    print("Circular frequencies (rad/s):", omega)
+    print("Frequencies (Hz):", frequencies)
+    print("Periods (s):", periods)
+    print("Mass-normalized mode shapes (one mode per column):\n", shapes)
+    print("Modal participation factors:", participation)
+    print("Effective modal masses:", effective_mass)
+    print("Effective modal mass ratios:", effective_mass_ratio)
+    print("Automatically generated elements:")
     for ele in system.eles:
         print(ele)
-    print("末步节点位移:", result.disp[-1])
-    print("末步单元变形:", result.ele_defo[-1])
-    print("单元内力绝对峰值:", {
+    print("Final nodal displacements:", result.disp[-1])
+    print("Final element deformations:", result.ele_defo[-1])
+    print("Absolute peak element forces:", {
         ele_id: peak.absolute
         for ele_id, peak in result.peaks["ele_force"].items()
     })
 
+    # 11. Plot response histories and the hysteresis loop from the recorded result interfaces.
+    dof_4 = 3
+    connecting_element = next((ele for ele in system.eles if ele.dofs == (0, 1)), None)
+    if connecting_element is None:
+        raise ValueError("No element connects DOF 1 and DOF 2")
+    element_id = connecting_element.id
+    disp_column = result.columns["disp"].index(dof_4)
+    accel_column = result.columns["accel"].index(dof_4)
+    force_column = result.columns["ele_force"].index(element_id)
+    deformation_column = result.columns["ele_defo"].index(element_id)
+
+    fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+    axes[0, 0].plot(result.times, result.disp[:, disp_column], linewidth=1.0)
+    axes[0, 0].set_title("DOF 4 displacement history")
+    axes[0, 0].set_xlabel("Time (s)")
+    axes[0, 0].set_ylabel("Displacement")
+
+    axes[0, 1].plot(result.times, result.accel[:, accel_column], linewidth=1.0)
+    axes[0, 1].set_title("DOF 4 acceleration history")
+    axes[0, 1].set_xlabel("Time (s)")
+    axes[0, 1].set_ylabel("Acceleration")
+
+    axes[1, 0].plot(result.times, result.ele_force[:, force_column], linewidth=1.0)
+    axes[1, 0].set_title(f"Element 1 shear history (solver ID {element_id})")
+    axes[1, 0].set_xlabel("Time (s)")
+    axes[1, 0].set_ylabel("Shear force")
+
+    axes[1, 1].plot(
+        result.ele_defo[:, deformation_column],
+        result.ele_force[:, force_column],
+        linewidth=1.0,
+    )
+    axes[1, 1].set_title(f"Element 1 hysteresis loop (solver ID {element_id})")
+    axes[1, 1].set_xlabel("Relative displacement (DOF 2 - DOF 1)")
+    axes[1, 1].set_ylabel("Shear force")
+
+    for axis in axes.flat:
+        axis.grid(True, alpha=0.3)
+    fig.tight_layout()
+    plt.show()
+    plt.close(fig)
 
 if __name__ == "__main__":
     main()
