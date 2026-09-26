@@ -31,8 +31,20 @@ class ModTakeda(UniaxialMaterial):
         self.revertToStart()
 
     def setTrialStrain(self, strain: float, strainRate: float = 0.0) -> None:
+        self._set_trial_response(float(strain))
+        dstrain = self.Tstrain - self.Cstrain
+        if abs(dstrain) <= sys.float_info.epsilon:
+            return
+        scale = max(abs(self.Tstrain), abs(self.Cstrain), self.uy, 1e-8)
+        step = min(1e-6 * scale, 0.25 * abs(dstrain))
+        direction = 1.0 if dstrain > 0 else -1.0
+        probe = self.getCopy()
+        probe._set_trial_response(self.Tstrain + direction * step)
+        self.Ttangent = (probe.Tstress - self.Tstress) / (direction * step)
+
+    def _set_trial_response(self, strain: float) -> None:
         self.revertToLastCommit()
-        self.Tstrain = float(strain)
+        self.Tstrain = strain
         dStrain = self.Tstrain - self.Cstrain
         if abs(dStrain) > sys.float_info.epsilon:
             if dStrain > 0:
@@ -85,7 +97,6 @@ class ModTakeda(UniaxialMaterial):
             else:
                 self.Tdm_neg = min(self.Tdm_neg, self.Tstrain)
                 self.TFm_neg = min(self.TFm_neg, self.Tstress)
-            self.Ttangent = (self.Tstress - self.Cstress) / dStrain
         else:
             self.Tstress = self.Cstress
             self.Ttangent = self.Ctangent
